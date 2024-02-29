@@ -4,16 +4,12 @@ using System.Collections.Generic;
 
 namespace binset
 {
-	public class binset : ICloneable, IComparable<binset>, ISet<binset>
+	public class binset : ICloneable, IComparable<binset>, IEnumerable<binset>
 	{
 		readonly bool nil = true;
 		public binset one, two;
 		public binset()
 		{ one = null; two = null; }
-		public void Clear()
-		{ one = null; two = null; }
-		public bool IsReadOnly
-		{ get{ return false; } }
 		public binset(int i)
 		{
 			if(i <= 0)
@@ -88,19 +84,6 @@ namespace binset
 			return (one.Hash32(power - 1) << power)
 				+ two.Hash32(power - 1); 
 		}
-		public virtual bool SetEquals(binset b)
-		{
-			return Equals(b);
-		}
-		public binset UnionOf(IEnumerable<binset> b)
-		{
-			binset ret = new binset();
-			foreach(binset bs in b)
-				ret |= bs;
-			return ret;
-		}
-		public bool SetEquals(IEnumerable<binset> b)
-		{ return SetEquals(UnionOf(b)); }
 		public int CompareTo(binset b)
 		{
 			if(isEmpty)
@@ -148,29 +131,7 @@ namespace binset
 			a.two & b.two);
 		}
 		public bool Contains(binset b)
-		{ return (this & b).SetEquals(b); }
-		public void IntersectWith(IEnumerable<binset> b)
-		{
-			binset ret = this & UnionOf(b);
-			one = ret.one;
-			two = ret.two;
-		}
-		public bool IsSupersetOf(IEnumerable<binset> b)
-		{ return Contains(UnionOf(b)); }
-		public bool IsSubsetOf(IEnumerable<binset> b)
-		{ return UnionOf(b).Contains(this); }
-		public bool IsProperSupersetOf(IEnumerable<binset> b)
-		{ binset tmp = UnionOf(b);
-		  return Contains(tmp) && !SetEquals(tmp); }
-		public bool IsProperSubsetOf(IEnumerable<binset> b)
-		{ binset tmp = UnionOf(b);
-		  return tmp.Contains(this) && !SetEquals(tmp); }
-		public bool Overlaps(IEnumerable<binset> b)
-		{
-			foreach(binset bs in b)
-				if(Contains(bs)) return true;
-			return false;
-		}
+		{ return (this & b).Equals(b); }
 		public static binset operator -(
 		binset a, binset b)
 		{
@@ -188,20 +149,6 @@ namespace binset
 				a.one - b.one,
 				a.two - b.two
 			);
-		}
-		public void ExceptWith(IEnumerable<binset> b)
-		{
-			binset ret = this - UnionOf(b);
-			one = ret.one;
-			two = ret.two;
-		}
-		public bool Remove(binset b)
-		{
-			binset ret = this - b;
-			if(SetEquals(ret)) return false;
-			one = ret.one;
-			two = ret.two;
-			return true;
 		}
 		public static binset operator ^(
 		binset a, binset b)
@@ -229,11 +176,6 @@ namespace binset
 				a.two ^ b.two
 			);
 		}
-		public void SymmetricExceptWith(IEnumerable<binset> b)
-		{ binset ret = this ^ UnionOf(b);
-		  one = ret.one;
-		  two = ret.two;
-		}
 		public static binset operator |(
 		binset a, binset b)
 		{
@@ -260,22 +202,6 @@ namespace binset
 				a.two | b.two
 			);
 		}
-		public void UnionWith(IEnumerable<binset> b)
-		{
-			binset ret = this | UnionOf(b);
-			one = ret.one;
-			two = ret.two;
-		}
-		public bool Add(binset b)
-		{
-			binset ret = this | b;
-			if(SetEquals(ret)) return false;
-			one = ret.one;
-			two = ret.two;
-			return true;
-		}
-		void ICollection<binset>.Add(binset b)
-		{ Add(b); }
 		public static binset operator +(
 		binset a, binset b)
 		{
@@ -315,12 +241,6 @@ namespace binset
 				a.one * b,
 				a.two * b
 			);
-		}
-		void ICollection<binset>.CopyTo(binset[] arr, int start)
-		{
-			int ix = start;
-			foreach(binset bs in this)
-				arr[ix++] = bs;	
 		}
 		public IEnumerator<binset> GetEnumerator()
 		{ return new BSEnum(this); }
