@@ -1,7 +1,4 @@
 class binset:
-    nil=True
-    one=None
-    two=None
     def __init__(self, in1=None, in2=None):
         if(in1 is None):
             self.one=None
@@ -32,9 +29,7 @@ class binset:
     def isEmpty(self):
         return (self.one is None) and (self.two is None)
     def isOne(self):
-        if(self.isEmpty()):
-            return False
-        return self.one.isEmpty() # and self.two.isEmpty()
+        return not self.isEmpty() and self.one.isEmpty() and self.two.isEmpty()
     def count(self):
         if(self.isEmpty()):
             return 0
@@ -59,7 +54,7 @@ class binset:
                (self.two==other.two)
     def __and__(self,other):
         if not isinstance(other,binset):
-            return self
+            return None
         if(self.isEmpty() or other.isEmpty()):
             return binset()
         if(self.isOne()):
@@ -103,7 +98,7 @@ class binset:
         return binset(self.one | other.one, self.two | other.two)
     def __sub__(self,other):
         if not isinstance(other,binset):
-            return self
+            return None
         if(self.isEmpty() or other.contains(self)):
             return binset()
         if(other.isEmpty()):
@@ -150,65 +145,101 @@ class binset:
 
 class binarray(binset):
     def __init__(self,size:int=2,T:type=binset):
-        self.size=size if size>2 else 2
+        super().__init__()
+        self.size=size if isinstance(size,int) and (size>2) else 2
         self.T=T if issubclass(T,binset) else binset
     def __getitem__(self,ix:int):
         if((ix<0) or (ix>=self.size)):
             raise IndexError()
         if(self.size==2):
             if(ix==0):
-                return self.one if self.one else self.T()
-            return self.two if self.two else self.T()
+                return self.one if self.one is not None else binset()
+            return self.two if self.two is not None else binset()
         if((self.size==3) and (ix==2)):
-            return self.two if self.two else self.T()
-        if(ix<(self.size+1)/2):
+            return self.two if self.two is not None else binset()
+        if(ix<(self.size+1)//2):
             if isinstance(self.one,binarray):
-                return self.one[ix]
-            return self.T()
+            	return self.one[ix]
+            return binset()
         if isinstance(self.two,binarray):
-            return self.two[ix-(self.size + 1)/2]
-        return self.T()
+            return self.two[ix-(self.size + 1)//2]
+        return binset()
     def __setitem__(self,ix:int,value):
         if((ix<0) or (ix>=self.size)):
             raise IndexError()
         if(self.size==2):
-            if(ix==0):
-                self.one=value
-                if not self.two:
-                    self.two=self.T()
-            else:
-                self.two=value
-                if not self.one:
-                    self.one=self.T()
-            return
+        	if ix==0:
+        		if (value is None) and isinstance(self.two,self.T):
+        			self.one=binset()
+        			return
+        		self.one=value
+        		if value and not isinstance(self.two,binset):
+        			self.two=binset()
+        	else:
+        		if (value is None) and isinstance(self.one,self.T):
+        			self.two=binset()
+        			return
+        		self.two=value
+       			if value and not isinstance(self.one,binset):
+        			self.one=binset()
+        	return
         if((self.size==3) and (ix==2)):
+            if (value is None) and isinstance(self.one,binarray):
+            	self.two=binset()
+            	return
             self.two=value
-            if not self.one:
-                self.one=self.T()
+            if value and not isinstance(self.one,binset):
+                self.one=binset()
             return
-        if(ix<(self.size + 1)/2):
+        if(ix<(self.size + 1)//2):
             if not isinstance(self.one,binarray):
-                self.one=binarray((self.size+1)/2,self.T)
+            	if not value:
+            		return
+            	self.one=binarray((self.size+1)//2,self.T)
+            if isinstance(value,self.T):
+            	if not isinstance(self.two,binset):
+                	self.two=binset()
+            elif not isinstance(self.two,self.T):
+            	self.one=None
+            	self.two=None
+            	return
             self.one[ix]=value
-            if not self.two:
-                self.two=self.T()
         else:
             if not isinstance(self.two,binarray):
-                self.two=binarray(self.size/2,self.T)
-            self.two[ix-(self.size+1)/2]=value
-            if not self.one:
-                self.one=self.T()
+            	if not value:
+            		return
+            	self.two=binarray(self.size//2,self.T)
+            if isinstance(value,self.T):
+            	if not isinstance(self.one,binset):
+                    self.one=binset()
+            elif not isinstance(self.one,self.T):
+            	self.one=None
+            	self.two=None
+            	return
+            self.two[ix-(self.size+1)//2]=value
     def len(self):
         if(self.isOne()):
             return 0
         ct=0
         if(isinstance(self.one,binarray)):
             ct+=self.one.len()
-        elif(self.one and not (self.one.isEmpty())):
+        elif(isinstance(self.one,T)):
             ct+=1
         if(isinstance(self.two,binarray)):
             ct+=self.two.len()
-        elif(self.two and not (self.two.isEmpty())):
+        elif(isinstance(self.two,T)):
             ct+=1
         return ct
-
+    def __iter__(self):
+    	self.iterix=0;
+    	return self
+    def __next__(self):
+    	ret=None
+    	while not ret:
+    		if self.iterix>=self.size:
+    			raise StopIteration
+    		ret=self[self.iterix]
+    		if not isinstance(ret,self.T):
+     			ret = None
+    		self.iterix+=1
+    	return ret
